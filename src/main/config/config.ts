@@ -19,6 +19,7 @@
  * along with Xibo.  If not, see <http://www.gnu.org/licenses/>.
  */
 const fs = require('fs/promises');
+import { getEmbeddedServerPort } from '../common/embeddedServerPort';
 import { join } from 'path';
 import { machineId } from 'node-machine-id';
 import { randomUUID } from 'crypto';
@@ -366,6 +367,9 @@ export class Config {
       Number(registerDisplay.getSetting('maxConcurrentDownloads', 2)) || 2,
     );
     this.displayTags = registerDisplay.getTags();
+    // Port of the embedded web server. Applied at the next start of the player, see
+    // common/embeddedServerPort.ts. Empty/invalid values fall back to the default.
+    this.settings['embeddedServerPort'] = registerDisplay.getSetting('embeddedServerPort', null);
     this.settings['isRecordGeoLocationOnProofOfPlay'] = registerDisplay.getSetting('isRecordGeoLocationOnProofOfPlay', false) === '1';
     this.state.displayStatus = registerDisplay.status || 0;
     this.state.registrationCode = registerDisplay.code ?? '';
@@ -455,6 +459,7 @@ export class Config {
       state: this.state.toJson(),
       pendingCmsTransfer: this.pendingCmsTransfer,
       proxy: this.proxy,
+      embeddedServerPort: getEmbeddedServerPort(),
     });
   }
 }
