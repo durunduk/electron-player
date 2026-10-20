@@ -21,7 +21,7 @@
 const fs = require('fs/promises');
 import { getEmbeddedServerPort } from '../common/embeddedServerPort';
 import { join } from 'path';
-import { machineId } from 'node-machine-id';
+import { generateHardwareKey, getHardwareKeyOverride, HARDWARE_KEY_ENV } from '../common/hardwareKey';
 import { randomUUID } from 'crypto';
 import os from 'os';
 
@@ -228,7 +228,7 @@ export class Config {
     const data = await loadSettings(this.savePath);
 
     if (data) {
-      this.hardwareKey = data.hardwareKey ?? (await machineId()).substring(0, 40);
+      this.hardwareKey = data.hardwareKey ?? (await generateHardwareKey());
       this.cmsUrl = readCmsField(data.cmsUrl);
       this.cmsKey = readCmsField(data.cmsKey);
       this.xmrChannel = data.xmrChannel ?? randomUUID();
@@ -236,7 +236,7 @@ export class Config {
       this.pendingCmsTransfer = data.pendingCmsTransfer ?? null;
       this.proxy = data.proxy ?? null;
     } else {
-      this.hardwareKey = (await machineId()).substring(0, 40);
+      this.hardwareKey = await generateHardwareKey();
       this.xmrChannel = randomUUID();
       this.macAddress = this.getMacAddress();
 
@@ -244,6 +244,15 @@ export class Config {
       if (data === null) {
         await this.save();
       }
+    }
+
+    // A key set by hand in the environment wins, and is saved so the display keeps it even if
+    // the player is later started without the variable.
+    const keyOverride = getHardwareKeyOverride();
+    if (keyOverride !== null && keyOverride !== this.hardwareKey) {
+      console.log(`[Config] Hardware key set from ${HARDWARE_KEY_ENV}: ${keyOverride} (was ${this.hardwareKey})`);
+      this.hardwareKey = keyOverride;
+      await this.save();
     }
 
     console.log(`Loading ${this.cmsSavePath}`);
